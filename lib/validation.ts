@@ -1,0 +1,66 @@
+import { z } from "zod";
+
+export const emailSchema = z.string().trim().email("E-mail inválido");
+export const passwordSchema = z.string().min(6, "A senha precisa ter ao menos 6 caracteres");
+
+export const signUpSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+export const signInSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Informe a senha"),
+});
+
+export const addBookSchema = z.object({
+  googleVolumeId: z.string().min(1),
+});
+
+export const createCustomStatusSchema = z.object({
+  label: z.string().trim().min(1, "Informe um nome para o status").max(40),
+});
+
+export const updateStatusSchema = z.object({
+  entryId: z.string().uuid(),
+  statusId: z.string().uuid(),
+});
+
+export const startSessionSchema = z.object({
+  entryId: z.string().uuid(),
+  startedAt: z.string().optional(),
+  format: z.enum(["livro", "ebook", "audiobook"]),
+});
+
+export const updateSessionDatesSchema = z.object({
+  sessionId: z.string().uuid(),
+  startedAt: z.string().optional().nullable(),
+  finishedAt: z.string().optional().nullable(),
+});
+
+export const finishSessionSchema = z.object({
+  sessionId: z.string().uuid(),
+  finishedAt: z.string().min(1, "Informe a data de término"),
+});
+
+export const abandonSessionSchema = z.object({
+  sessionId: z.string().uuid(),
+});
+
+export const addCommentSchema = z.object({
+  sessionId: z.string().uuid(),
+  body: z.string().trim().min(1, "Escreva um comentário"),
+  progressPage: z.coerce.number().int().positive().optional().nullable(),
+  progressPercent: z.coerce.number().int().min(0).max(100).optional().nullable(),
+});
+
+// nota fracionada de 1 a 5 em passos de 0,5, armazenada como "meias-estrelas" (2 a 10)
+export const setRatingSchema = z.object({
+  sessionId: z.string().uuid(),
+  ratingHalf: z.coerce.number().int().min(2).max(10),
+});
+
+export const setReviewSchema = z.object({
+  sessionId: z.string().uuid(),
+  review: z.string().trim().min(1, "Escreva a resenha"),
+});

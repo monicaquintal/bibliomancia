@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #fbf3e7;
+  --paper-raised: #fffcf6;
+  --ink: #2e2720;
+  --ink-soft: #6b5f4f;
+  --cover: #3f6952;
+  --cover-dark: #315340;
+  --marigold: #e3a857;
+  --marigold-dark: #c98f3f;
+  --berry: #8c4b4b;
+  --night: #2a2350;
+  --dust: #a99a85;
+  --dust-line: #e4d9c6;
+  --stardust: rgba(227, 168, 87, 0.4);
+  --stardust-2: rgba(42, 35, 80, 0.16);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-cover: var(--cover);
+  --color-cover-dark: var(--cover-dark);
+  --color-marigold: var(--marigold);
+  --color-marigold-dark: var(--marigold-dark);
+  --color-berry: var(--berry);
+  --color-night: var(--night);
+  --color-dust: var(--dust);
+  --color-dust-line: var(--dust-line);
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-karla);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #23201b;
+    --paper-raised: #2b2620;
+    --ink: #f2e9da;
+    --ink-soft: #bfb09a;
+    --cover: #6ea184;
+    --cover-dark: #5a8a70;
+    --marigold: #eab766;
+    --marigold-dark: #d99f4c;
+    --berry: #c17878;
+    --night: #c3b3f7;
+    --dust: #8a7c68;
+    --dust-line: #3a352c;
+    --stardust: rgba(234, 183, 102, 0.6);
+    --stardust-2: rgba(255, 255, 255, 0.4);
+  }
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(1px 1px at 8% 12%, var(--stardust) 45%, transparent 46%),
+    radial-gradient(1px 1px at 32% 68%, var(--stardust-2) 45%, transparent 46%),
+    radial-gradient(0.8px 0.8px at 58% 28%, var(--stardust) 45%, transparent 46%),
+    radial-gradient(1px 1px at 78% 82%, var(--stardust-2) 45%, transparent 46%),
+    radial-gradient(0.8px 0.8px at 90% 15%, var(--stardust) 45%, transparent 46%),
+    radial-gradient(1px 1px at 15% 90%, var(--stardust-2) 45%, transparent 46%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-karla), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--dust-line);
+}
+
+::selection {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+input,
+textarea,
+select {
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.75;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cover);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
