@@ -14,6 +14,9 @@ export interface NormalizedVolume {
   pageCount: number | null;
   language: string | null;
   thumbnailUrl: string | null;
+  categories: string[];
+  averageRating: number | null;
+  ratingsCount: number | null;
 }
 
 interface GoogleVolumeItem {
@@ -29,6 +32,9 @@ interface GoogleVolumeItem {
     language?: string;
     industryIdentifiers?: { type: string; identifier: string }[];
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+    categories?: string[];
+    averageRating?: number;
+    ratingsCount?: number;
   };
 }
 
@@ -46,6 +52,11 @@ function isIsbn(query: string): boolean {
 function toHttps(url: string | undefined | null): string | null {
   if (!url) return null;
   return url.replace(/^http:\/\//, "https://");
+}
+
+function stripHtml(text: string | undefined | null): string | null {
+  if (!text) return null;
+  return text.replace(/<[^>]+>/g, "").trim() || null;
 }
 
 function normalizeVolume(item: GoogleVolumeItem): NormalizedVolume {
@@ -67,10 +78,13 @@ function normalizeVolume(item: GoogleVolumeItem): NormalizedVolume {
     publisher: info.publisher ?? null,
     publishedDate: info.publishedDate ?? null,
     publishedYear,
-    description: info.description ?? null,
+    description: stripHtml(info.description),
     pageCount: info.pageCount ?? null,
     language: info.language ?? null,
     thumbnailUrl: toHttps(info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail),
+    categories: info.categories ?? [],
+    averageRating: info.averageRating ?? null,
+    ratingsCount: info.ratingsCount ?? null,
   };
 }
 
@@ -83,12 +97,16 @@ export async function searchVolumes(
   rawQuery: string,
   startIndex = 0,
   maxResults = 20,
+  langRestrict?: string,
 ): Promise<{ items: NormalizedVolume[]; totalItems: number }> {
   const params = new URLSearchParams({
     q: buildQuery(rawQuery),
     startIndex: String(startIndex),
     maxResults: String(maxResults),
   });
+  if (langRestrict) {
+    params.set("langRestrict", langRestrict);
+  }
   if (process.env.GOOGLE_BOOKS_API_KEY) {
     params.set("key", process.env.GOOGLE_BOOKS_API_KEY);
   }

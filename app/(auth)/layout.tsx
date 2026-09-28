@@ -1,3 +1,5 @@
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 function OpenBookMark() {
   return (
     <svg viewBox="0 0 72 48" className="h-10 w-16" aria-hidden>
@@ -28,7 +30,8 @@ function OpenBookMark() {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div id="main-content" className="flex flex-1 items-center justify-center px-4 py-16">
+    <div id="main-content" className="relative flex flex-1 items-center justify-center px-4 py-16">
+      <ThemeToggle className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-dust-line text-ink-soft transition-colors hover:text-ink" />
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <OpenBookMark />

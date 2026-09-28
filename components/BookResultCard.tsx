@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { addBookToLibrary } from "@/actions/books";
 import type { NormalizedVolume } from "@/lib/google-books";
 
@@ -12,6 +12,7 @@ export function BookResultCard({
   alreadyInLibrary: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <li className="flex gap-4 rounded-lg border border-dust-line bg-paper-raised p-4">
@@ -27,9 +28,18 @@ export function BookResultCard({
         ) : null}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="line-clamp-2 font-serif font-medium leading-snug text-ink">
-          {volume.title}
-        </p>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="text-left"
+        >
+          <p
+            className={`font-serif font-medium leading-snug text-ink underline decoration-dust-line decoration-1 underline-offset-2 transition-colors hover:text-cover hover:decoration-cover ${expanded ? "" : "line-clamp-2"}`}
+          >
+            {volume.title}
+          </p>
+        </button>
         {volume.subtitle && (
           <p className="truncate text-sm text-ink-soft">{volume.subtitle}</p>
         )}
@@ -41,6 +51,24 @@ export function BookResultCard({
             .filter(Boolean)
             .join(" · ") || "Sem edição informada"}
         </p>
+
+        {expanded && (
+          <div className="mt-1 space-y-2 border-t border-dust-line pt-2 text-sm text-ink-soft">
+            {volume.averageRating != null && (
+              <p>
+                ★ {volume.averageRating.toFixed(1)}
+                {volume.ratingsCount ? ` · ${volume.ratingsCount} avaliações` : ""}
+              </p>
+            )}
+            {volume.pageCount != null && <p>{volume.pageCount} páginas</p>}
+            {volume.description ? (
+              <p>{volume.description}</p>
+            ) : (
+              <p className="italic">Sem descrição disponível.</p>
+            )}
+          </div>
+        )}
+
         <div className="mt-2">
           {alreadyInLibrary ? (
             <span className="text-sm text-ink-soft">Já está na sua biblioteca</span>

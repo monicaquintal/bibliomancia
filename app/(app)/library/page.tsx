@@ -2,13 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { NewCustomStatusForm } from "@/components/NewCustomStatusForm";
 import { StatusGlyph } from "@/components/StatusGlyph";
+import { LibrarySearch, type LibraryEntryView } from "@/components/LibrarySearch";
 import { statusTone } from "@/lib/status-colors";
-
-const FORMAT_LABEL: Record<string, string> = {
-  livro: "Livro físico",
-  ebook: "Ebook",
-  audiobook: "Audiobook",
-};
 
 export default async function LibraryPage({
   searchParams,
@@ -39,6 +34,21 @@ export default async function LibraryPage({
   const entries = statusFilter
     ? allEntries?.filter((e) => e.reading_statuses?.key === statusFilter)
     : allEntries;
+
+  const entryViews: LibraryEntryView[] = (entries ?? []).map((entry) => {
+    const sessions = entry.reading_sessions ?? [];
+    const lastSession = [...sessions].sort((a, b) => b.sequence_number - a.sequence_number)[0];
+    return {
+      id: entry.id,
+      title: entry.books?.title ?? "",
+      authors: entry.books?.authors ?? [],
+      thumbnailUrl: entry.books?.thumbnail_url ?? null,
+      statusKey: entry.reading_statuses?.key ?? "",
+      statusLabel: entry.reading_statuses?.label ?? "",
+      lastFormat: lastSession?.format ?? null,
+      sessionCount: sessions.length,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -90,69 +100,7 @@ export default async function LibraryPage({
         </p>
       )}
 
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {entries?.map((entry) => {
-          const book = entry.books;
-          const sessions = entry.reading_sessions ?? [];
-          const lastSession = [...sessions].sort(
-            (a, b) => b.sequence_number - a.sequence_number,
-          )[0];
-          const tone = statusTone(entry.reading_statuses?.key ?? "");
-          return (
-            <li key={entry.id}>
-              <Link
-                href={`/library/${entry.id}`}
-                className="flex overflow-hidden rounded-lg border border-dust-line bg-paper-raised transition-colors hover:border-ink-soft"
-              >
-                <span className="w-1.5 shrink-0" style={{ background: tone.dot }} />
-                <div className="flex flex-1 gap-3 p-3">
-                  <div className="h-20 w-14 shrink-0 overflow-hidden rounded-sm bg-dust-line">
-                    {book?.thumbnail_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={book.thumbnail_url}
-                        alt=""
-                        loading="lazy"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="line-clamp-2 font-serif font-medium leading-snug text-ink">
-                      {book?.title}
-                    </p>
-                    <p className="truncate text-sm text-ink-soft">
-                      {book?.authors?.join(", ")}
-                    </p>
-                    <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs">
-                      <span
-                        className="flex items-center gap-1 font-medium"
-                        style={{ color: tone.fg }}
-                      >
-                        <StatusGlyph
-                          statusKey={entry.reading_statuses?.key ?? ""}
-                          maskColor="var(--paper-raised)"
-                        />
-                        {entry.reading_statuses?.label}
-                      </span>
-                      {lastSession?.format && (
-                        <span className="text-ink-soft">
-                          {FORMAT_LABEL[lastSession.format]}
-                        </span>
-                      )}
-                      {sessions.length > 1 && (
-                        <span className="text-ink-soft">
-                          {sessions.length} leituras
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {entries && entries.length > 0 && <LibrarySearch entries={entryViews} />}
     </div>
   );
 }

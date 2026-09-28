@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fbf3e7",
+  themeColor: "#eef1f7",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -28,7 +28,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pt-BR"
       className={`${fraunces.variable} ${karla.variable} h-full antialiased`}
       style={{ colorScheme: "light dark" }}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col bg-paper text-ink">
         <a
           href="#main-content"

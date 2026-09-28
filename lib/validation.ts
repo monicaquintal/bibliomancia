@@ -13,6 +13,14 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Informe a senha"),
 });
 
+export const requestPasswordResetSchema = z.object({
+  email: emailSchema,
+});
+
+export const updatePasswordSchema = z.object({
+  password: passwordSchema,
+});
+
 export const addBookSchema = z.object({
   googleVolumeId: z.string().min(1),
 });
@@ -47,6 +55,10 @@ export const abandonSessionSchema = z.object({
   sessionId: z.string().uuid(),
 });
 
+export const deleteLibraryEntrySchema = z.object({
+  entryId: z.string().uuid(),
+});
+
 export const addCommentSchema = z.object({
   sessionId: z.string().uuid(),
   body: z.string().trim().min(1, "Escreva um comentário"),
@@ -63,4 +75,9 @@ export const setRatingSchema = z.object({
 export const setReviewSchema = z.object({
   sessionId: z.string().uuid(),
   review: z.string().trim().min(1, "Escreva a resenha"),
+});
+
+export const setReadingGoalSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  targetBooks: z.coerce.number().int().min(1, "A meta precisa ser de ao menos 1 livro").max(1000),
 });

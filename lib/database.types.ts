@@ -172,6 +172,26 @@ export interface Database {
           },
         ];
       };
+      reading_goals: {
+        Row: {
+          id: string;
+          user_id: string;
+          year: number;
+          target_books: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          year: number;
+          target_books: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["reading_goals"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

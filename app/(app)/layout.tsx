@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/actions/auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function BookmarkMark() {
   return (
@@ -37,19 +38,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link href="/vitrine" className="transition-colors hover:text-ink">
                 Vitrine
               </Link>
+              <Link href="/estatisticas" className="transition-colors hover:text-ink">
+                Estatísticas
+              </Link>
+              <Link href="/descobrir" className="transition-colors hover:text-ink">
+                Descobrir
+              </Link>
               <Link href="/search" className="transition-colors hover:text-ink">
                 Pesquisar
               </Link>
             </nav>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="text-sm text-ink-soft transition-colors hover:text-ink"
-            >
-              Sair
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-sm text-ink-soft transition-colors hover:text-ink"
+              >
+                Sair
+              </button>
+            </form>
+          </div>
         </div>
         <nav className="flex items-center gap-4 border-t border-dust-line px-4 py-2 text-sm font-medium text-ink-soft sm:hidden">
           <Link href="/library" className="hover:text-ink">
@@ -57,6 +67,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <Link href="/vitrine" className="hover:text-ink">
             Vitrine
+          </Link>
+          <Link href="/estatisticas" className="hover:text-ink">
+            Estatísticas
+          </Link>
+          <Link href="/descobrir" className="hover:text-ink">
+            Descobrir
           </Link>
           <Link href="/search" className="hover:text-ink">
             Pesquisar
