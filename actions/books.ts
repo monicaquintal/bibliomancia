@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getVolumeById } from "@/lib/google-books";
-import { addBookSchema } from "@/lib/validation";
+import { addBookSchema, deleteLibraryEntrySchema } from "@/lib/validation";
 
 export async function addBookToLibrary(formData: FormData) {
   const parsed = addBookSchema.safeParse({
@@ -84,5 +84,27 @@ export async function addBookToLibrary(formData: FormData) {
   if (entryId) {
     redirect(`/library/${entryId}`);
   }
+  redirect("/library");
+}
+
+export async function deleteLibraryEntry(formData: FormData) {
+  const parsed = deleteLibraryEntrySchema.safeParse({
+    entryId: formData.get("entryId"),
+  });
+  if (!parsed.success) throw new Error("Dados inválidos");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase
+    .from("library_entries")
+    .delete()
+    .eq("id", parsed.data.entryId)
+    .eq("user_id", user.id);
+
+  revalidatePath("/library");
   redirect("/library");
 }

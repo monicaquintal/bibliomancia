@@ -12,6 +12,7 @@ import {
   startReadingSession,
   updateSessionDates,
 } from "@/actions/reading";
+import { deleteLibraryEntry } from "@/actions/books";
 
 const SESSION_STATUS_LABEL: Record<string, string> = {
   em_andamento: "Em andamento",
@@ -154,6 +155,16 @@ export default async function LibraryEntryPage({
             </div>
           </form>
         )}
+
+        <form action={deleteLibraryEntry} className="border-t border-dust-line pt-4">
+          <input type="hidden" name="entryId" value={entry.id} />
+          <ConfirmButton
+            confirmMessage={`Excluir "${book.title}" da sua estante? Isso apaga todo o histórico de leituras, comentários e avaliações desse livro. Essa ação não pode ser desfeita.`}
+            className="text-sm text-ink-soft transition-colors hover:text-berry"
+          >
+            Excluir da estante
+          </ConfirmButton>
+        </form>
       </div>
 
       <div className="hidden bg-dust-line md:block" />
