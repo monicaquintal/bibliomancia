@@ -14,9 +14,9 @@ function plankBackground(itemH: number, gap: number) {
   return (
     `repeating-linear-gradient(to bottom,` +
     `transparent 0px, transparent ${itemH}px,` +
-    `#a9825c ${itemH}px, #a9825c ${edge1}px,` +
-    `#8a6a4a ${edge1}px, #8a6a4a ${edge2}px,` +
-    `#5c4530 ${edge2}px, #5c4530 ${edge3}px,` +
+    `var(--cover) ${itemH}px, var(--cover) ${edge1}px,` +
+    `var(--cover-dark) ${edge1}px, var(--cover-dark) ${edge2}px,` +
+    `var(--night) ${edge2}px, var(--night) ${edge3}px,` +
     `transparent ${edge3}px, transparent ${period}px)`
   );
 }
@@ -117,7 +117,7 @@ function SpineShelf({ books }: { books: ShelfBook[] }) {
   const estimatedRows = Math.max(1, Math.ceil((books.length * 15) / 900));
   return (
     <div
-      className="rounded-lg bg-[#eee0c8] p-6"
+      className="rounded-lg border border-dust-line bg-paper-raised p-6"
       style={{
         contentVisibility: "auto",
         containIntrinsicSize: `auto ${estimatedRows * (SPINE_H + SPINE_GAP) + 48}px`,
@@ -209,7 +209,7 @@ export default async function VitrinePage() {
       {reading.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-serif text-lg font-semibold text-ink">Lendo agora</h2>
-          <div className="rounded-lg bg-[#eee0c8] p-6">
+          <div className="rounded-lg border border-dust-line bg-paper-raised p-6">
             <ul
               className="flex flex-wrap items-end gap-x-5"
               style={{
