@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { NewShelfForm } from "@/components/NewShelfForm";
 
 const SPINE_H = 176;
 const SPINE_GAP = 28;
@@ -147,13 +148,20 @@ export default async function VitrinePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: entries } = await supabase
-    .from("library_entries")
-    .select(
-      "id, updated_at, books(id, title, authors, thumbnail_url, page_count), reading_statuses(key), reading_sessions(status, finished_at)",
-    )
-    .eq("user_id", user!.id)
-    .order("updated_at", { ascending: false });
+  const [{ data: entries }, { data: shelves }] = await Promise.all([
+    supabase
+      .from("library_entries")
+      .select(
+        "id, updated_at, books(id, title, authors, thumbnail_url, page_count), reading_statuses(key), reading_sessions(status, finished_at), shelf_entries(shelf_id)",
+      )
+      .eq("user_id", user!.id)
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("shelves")
+      .select("id, name")
+      .eq("user_id", user!.id)
+      .order("name", { ascending: true }),
+  ]);
 
   const toShelfBook = (e: NonNullable<typeof entries>[number]): ShelfBook | null => {
     if (!e.books) return null;
@@ -182,6 +190,14 @@ export default async function VitrinePage() {
     .filter((b): b is ShelfBook => b !== null)
     .sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
 
+  const customShelves = (shelves ?? []).map((shelf) => ({
+    ...shelf,
+    books: (entries ?? [])
+      .filter((e) => e.shelf_entries?.some((se) => se.shelf_id === shelf.id))
+      .map(toShelfBook)
+      .filter((b): b is ShelfBook => b !== null),
+  }));
+
   const byYear = new Map<string, ShelfBook[]>();
   for (const book of read) {
     const year = book.finishedAt ? book.finishedAt.slice(0, 4) : UNDATED;
@@ -204,6 +220,9 @@ export default async function VitrinePage() {
           tudo que você já leu, lombada a lombada, organizado por ano. Passe o mouse
           sobre uma lombada para ver o título.
         </p>
+        <div className="mt-4">
+          <NewShelfForm />
+        </div>
       </div>
 
       {reading.length > 0 && (
@@ -276,6 +295,37 @@ export default async function VitrinePage() {
               })}
             </div>
           </>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="font-serif text-lg font-semibold text-ink">Minhas estantes</h2>
+        {customShelves.length === 0 ? (
+          <p className="text-sm text-ink-soft">
+            Crie estantes para agrupar livros do seu jeito — “Favoritos”, “Clube do livro”,
+            “Emprestados”. Um livro pode estar em várias ao mesmo tempo.
+          </p>
+        ) : (
+          <div className="space-y-8">
+            {customShelves.map((shelf) => (
+              <div key={shelf.id} className="space-y-2">
+                <h3 className="font-serif text-base font-semibold text-ink">
+                  {shelf.name}
+                  <span className="ml-2 text-sm font-normal text-ink-soft">
+                    {shelf.books.length} {shelf.books.length === 1 ? "livro" : "livros"}
+                  </span>
+                </h3>
+                {shelf.books.length === 0 ? (
+                  <p className="text-sm text-ink-soft">
+                    Vazia por enquanto — abra um livro da sua estante e escolha esta estante
+                    na seção “Estantes”.
+                  </p>
+                ) : (
+                  <SpineShelf books={shelf.books} />
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </section>
     </div>

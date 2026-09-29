@@ -6,6 +6,7 @@ import { ReviewEditor } from "@/components/ReviewEditor";
 import { CommentForm } from "@/components/CommentForm";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { StatusGlyph } from "@/components/StatusGlyph";
+import { ShelfPicker } from "@/components/ShelfPicker";
 import {
   abandonSession,
   finishSession,
@@ -63,7 +64,8 @@ export default async function LibraryEntryPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: entry }, { data: statuses }, { data: sessions }] = await Promise.all([
+  const [{ data: entry }, { data: statuses }, { data: sessions }, { data: shelves }, { data: shelfLinks }] =
+    await Promise.all([
     supabase
       .from("library_entries")
       .select("id, status_id, books(*), reading_statuses(id, key, label)")
@@ -80,6 +82,12 @@ export default async function LibraryEntryPage({
       .select("*")
       .eq("library_entry_id", entryId)
       .order("sequence_number", { ascending: false }),
+    supabase
+      .from("shelves")
+      .select("id, name")
+      .eq("user_id", user!.id)
+      .order("name", { ascending: true }),
+    supabase.from("shelf_entries").select("shelf_id").eq("library_entry_id", entryId),
   ]);
 
   if (!entry || !entry.books) notFound();
@@ -127,6 +135,12 @@ export default async function LibraryEntryPage({
           />
           <StatusSelect entryId={entry.id} statusId={entry.status_id} statuses={statuses ?? []} />
         </div>
+
+        <ShelfPicker
+          entryId={entry.id}
+          shelves={shelves ?? []}
+          memberIds={new Set((shelfLinks ?? []).map((l) => l.shelf_id))}
+        />
 
         {!hasActiveSession && (
           <form action={startReadingSession} className="space-y-2 rounded-lg border border-dust-line bg-paper-raised p-3">

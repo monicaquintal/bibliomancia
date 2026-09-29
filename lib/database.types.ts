@@ -192,6 +192,53 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["reading_goals"]["Insert"]>;
         Relationships: [];
       };
+      shelves: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shelves"]["Insert"]>;
+        Relationships: [];
+      };
+      shelf_entries: {
+        Row: {
+          shelf_id: string;
+          library_entry_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          shelf_id: string;
+          library_entry_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shelf_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "shelf_entries_shelf_id_fkey";
+            columns: ["shelf_id"];
+            isOneToOne: false;
+            referencedRelation: "shelves";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shelf_entries_library_entry_id_fkey";
+            columns: ["library_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "library_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

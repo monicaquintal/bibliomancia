@@ -81,3 +81,35 @@ export const setReadingGoalSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
   targetBooks: z.coerce.number().int().min(1, "A meta precisa ser de ao menos 1 livro").max(1000),
 });
+
+export const importRowSchema = z.object({
+  title: z.string().min(1).max(500),
+  author: z.string().max(300),
+  isbn10: z.string().max(13).nullable(),
+  isbn13: z.string().max(13).nullable(),
+  exclusiveShelf: z.enum(["read", "currently-reading", "to-read"]),
+  customShelves: z.array(z.string().min(1).max(100)).max(30),
+  rating: z.number().int().min(0).max(5),
+  dateRead: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  review: z.string().max(20000),
+  binding: z.string().max(100),
+});
+
+export const importBatchSchema = z.object({
+  rows: z.array(importRowSchema).min(1).max(10),
+});
+
+export const createShelfSchema = z.object({
+  name: z.string().trim().min(1, "Informe um nome para a estante").max(40),
+  entryId: z.string().uuid().optional(),
+});
+
+export const deleteShelfSchema = z.object({
+  shelfId: z.string().uuid(),
+});
+
+export const toggleShelfEntrySchema = z.object({
+  entryId: z.string().uuid(),
+  shelfId: z.string().uuid(),
+  member: z.enum(["0", "1"]),
+});
