@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { SearchClient } from "@/components/SearchClient";
+import { ManualBookForm } from "@/components/ManualBookForm";
 
 export default async function SearchPage() {
   const supabase = await createClient();
@@ -25,6 +26,7 @@ export default async function SearchPage() {
         </p>
       </div>
       <SearchClient existingVolumeIds={existingVolumeIds} />
+      <ManualBookForm />
     </div>
   );
 }

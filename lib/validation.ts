@@ -83,6 +83,10 @@ export const setReadingGoalSchema = z.object({
 });
 
 export const importRowSchema = z.object({
+  goodreadsId: z.string().max(30),
+  publisher: z.string().max(300).nullable(),
+  pageCount: z.number().int().positive().max(100000).nullable(),
+  year: z.number().int().min(0).max(3000).nullable(),
   title: z.string().min(1).max(500),
   author: z.string().max(300),
   isbn10: z.string().max(13).nullable(),
@@ -112,4 +116,12 @@ export const toggleShelfEntrySchema = z.object({
   entryId: z.string().uuid(),
   shelfId: z.string().uuid(),
   member: z.enum(["0", "1"]),
+});
+
+export const manualBookSchema = z.object({
+  title: z.string().trim().min(1, "Informe o título").max(500),
+  authors: z.string().trim().max(500).optional(),
+  publisher: z.string().trim().max(300).optional(),
+  pageCount: z.coerce.number().int().positive().max(100000).optional(),
+  year: z.coerce.number().int().min(0).max(3000).optional(),
 });

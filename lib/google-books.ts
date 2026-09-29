@@ -43,6 +43,18 @@ interface GoogleVolumesResponse {
   totalItems?: number;
 }
 
+// O Google Books devolve 429 em rajadas; tenta de novo com espera crescente.
+async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url);
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt >= retries) return res;
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const wait = retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(wait, 8000)));
+  }
+}
+
 const ISBN_RE = /^(?:\d{9}[\dXx]|\d{13})$/;
 
 function isIsbn(query: string): boolean {
@@ -111,7 +123,7 @@ export async function searchVolumes(
     params.set("key", process.env.GOOGLE_BOOKS_API_KEY);
   }
 
-  const res = await fetch(`${GOOGLE_BOOKS_API}?${params.toString()}`);
+  const res = await fetchWithRetry(`${GOOGLE_BOOKS_API}?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Google Books API respondeu ${res.status}`);
   }
@@ -128,7 +140,7 @@ export async function getVolumeById(googleVolumeId: string): Promise<NormalizedV
     params.set("key", process.env.GOOGLE_BOOKS_API_KEY);
   }
   const qs = params.toString();
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${GOOGLE_BOOKS_API}/${encodeURIComponent(googleVolumeId)}${qs ? `?${qs}` : ""}`,
   );
   if (!res.ok) {

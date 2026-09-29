@@ -3,6 +3,7 @@
 export type GoodreadsShelf = "read" | "currently-reading" | "to-read";
 
 export interface GoodreadsRow {
+  goodreadsId: string;
   title: string;
   author: string;
   isbn10: string | null;
@@ -13,6 +14,9 @@ export interface GoodreadsRow {
   dateRead: string | null;
   review: string;
   binding: string;
+  publisher: string | null;
+  pageCount: number | null;
+  year: number | null;
 }
 
 const KNOWN_SHELVES: GoodreadsShelf[] = ["read", "currently-reading", "to-read"];
@@ -79,6 +83,11 @@ export function parseGoodreadsCsv(text: string): GoodreadsRow[] {
 
   const col = (name: string) => header.indexOf(name);
   const idx = {
+    bookId: col("Book Id"),
+    publisher: col("Publisher"),
+    pages: col("Number of Pages"),
+    yearPublished: col("Year Published"),
+    yearOriginal: col("Original Publication Year"),
     title: col("Title"),
     author: col("Author"),
     isbn: col("ISBN"),
@@ -112,6 +121,7 @@ export function parseGoodreadsCsv(text: string): GoodreadsRow[] {
       }
 
       return {
+        goodreadsId: get(record, idx.bookId),
         title: get(record, idx.title),
         author: get(record, idx.author),
         isbn10: cleanIsbn(get(record, idx.isbn)),
@@ -122,6 +132,12 @@ export function parseGoodreadsCsv(text: string): GoodreadsRow[] {
         dateRead: cleanDate(get(record, idx.dateRead)),
         review: cleanReview(get(record, idx.review)),
         binding: get(record, idx.binding),
+        publisher: get(record, idx.publisher) || null,
+        pageCount: Number.parseInt(get(record, idx.pages), 10) || null,
+        year:
+          Number.parseInt(get(record, idx.yearPublished), 10) ||
+          Number.parseInt(get(record, idx.yearOriginal), 10) ||
+          null,
       };
     });
 }

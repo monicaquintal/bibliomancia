@@ -40,8 +40,8 @@ type ShelfBook = {
 
 function Spine({ book }: { book: ShelfBook }) {
   const width = book.pageCount
-    ? Math.max(11, Math.min(26, Math.round(book.pageCount / 24)))
-    : 14;
+    ? Math.max(24, Math.min(44, Math.round(book.pageCount / 14)))
+    : 30;
   const fallbackHue = hashHue(book.bookId);
 
   return (
@@ -114,28 +114,44 @@ function FaceOutCover({ book, index }: { book: ShelfBook; index: number }) {
   );
 }
 
+const BOOKS_PER_SHELF = 12;
+// Largura reservada por livro; cada estante tem sempre o tamanho de 12 lombadas,
+// então uma prateleira incompleta continua parecendo uma prateleira.
+const SPINE_SLOT = 38;
+
+// Cada estante comporta 12 lombadas; passou disso, abre outra. Em telas largas
+// as estantes ficam lado a lado, e quebram para a linha de baixo quando faltar espaço.
 function SpineShelf({ books }: { books: ShelfBook[] }) {
-  const estimatedRows = Math.max(1, Math.ceil((books.length * 15) / 900));
+  const shelves: ShelfBook[][] = [];
+  for (let i = 0; i < books.length; i += BOOKS_PER_SHELF) {
+    shelves.push(books.slice(i, i + BOOKS_PER_SHELF));
+  }
   return (
-    <div
-      className="rounded-lg border border-dust-line bg-paper-raised p-6"
-      style={{
-        contentVisibility: "auto",
-        containIntrinsicSize: `auto ${estimatedRows * (SPINE_H + SPINE_GAP) + 48}px`,
-      }}
-    >
-      <ul
-        className="flex flex-wrap items-end gap-x-px"
-        style={{
-          rowGap: SPINE_GAP,
-          paddingBottom: SPINE_GAP,
-          backgroundImage: plankBackground(SPINE_H, SPINE_GAP),
-        }}
-      >
-        {books.map((book) => (
-          <Spine key={book.entryId} book={book} />
-        ))}
-      </ul>
+    <div className="flex flex-wrap gap-4">
+      {shelves.map((shelf, i) => (
+        <div
+          key={i}
+          className="max-w-full rounded-lg border border-dust-line bg-paper-raised p-6"
+          style={{
+            contentVisibility: "auto",
+            containIntrinsicSize: `auto ${SPINE_H + SPINE_GAP + 48}px`,
+          }}
+        >
+          <ul
+            className="flex items-end gap-x-px"
+            style={{
+              width: BOOKS_PER_SHELF * SPINE_SLOT,
+              maxWidth: "100%",
+              paddingBottom: SPINE_GAP,
+              backgroundImage: plankBackground(SPINE_H, SPINE_GAP),
+            }}
+          >
+            {shelf.map((book) => (
+              <Spine key={book.entryId} book={book} />
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
@@ -205,6 +221,29 @@ export default async function VitrinePage() {
     if (group) group.push(book);
     else byYear.set(year, [book]);
   }
+
+  // Estante com nome de ano ("2023") se junta ao bloco desse ano em "Já lido",
+  // em vez de aparecer duas vezes na Vitrine.
+  const isYearShelf = (name: string) => /^\d{4}$/.test(name.trim());
+  for (const shelf of customShelves.filter((s) => isYearShelf(s.name))) {
+    const year = shelf.name.trim();
+    const group = byYear.get(year) ?? [];
+    const seen = new Set(group.map((b) => b.entryId));
+    const undated = byYear.get(UNDATED);
+    for (const book of shelf.books) {
+      if (seen.has(book.entryId)) continue;
+      // livro sem data de término sai de "Sem data" e vai para o ano da estante
+      const i = undated?.findIndex((u) => u.entryId === book.entryId) ?? -1;
+      if (i >= 0) undated!.splice(i, 1);
+      group.push(book);
+    }
+    group.sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
+    byYear.set(year, group);
+  }
+  if (byYear.get(UNDATED)?.length === 0) byYear.delete(UNDATED);
+  const otherShelves = customShelves.filter((s) => !isYearShelf(s.name));
+  const shownCount = new Set([...byYear.values()].flat().map((b) => b.entryId)).size;
+
   const years = [...byYear.keys()].sort((a, b) => {
     if (a === UNDATED) return 1;
     if (b === UNDATED) return -1;
@@ -248,14 +287,14 @@ export default async function VitrinePage() {
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-serif text-lg font-semibold text-ink">Já lido</h2>
-          {read.length > 0 && (
+          {shownCount > 0 && (
             <p className="text-sm text-ink-soft">
-              {read.length} {read.length === 1 ? "livro" : "livros"}
+              {shownCount} {shownCount === 1 ? "livro" : "livros"}
             </p>
           )}
         </div>
 
-        {read.length === 0 ? (
+        {shownCount === 0 ? (
           <p className="text-sm text-ink-soft">
             Ainda não há livros aqui — quando você terminar uma leitura, ele ganha um
             lugar nesta estante.
@@ -300,14 +339,14 @@ export default async function VitrinePage() {
 
       <section className="space-y-4">
         <h2 className="font-serif text-lg font-semibold text-ink">Minhas estantes</h2>
-        {customShelves.length === 0 ? (
+        {otherShelves.length === 0 ? (
           <p className="text-sm text-ink-soft">
             Crie estantes para agrupar livros do seu jeito — “Favoritos”, “Clube do livro”,
             “Emprestados”. Um livro pode estar em várias ao mesmo tempo.
           </p>
         ) : (
           <div className="space-y-8">
-            {customShelves.map((shelf) => (
+            {otherShelves.map((shelf) => (
               <div key={shelf.id} className="space-y-2">
                 <h3 className="font-serif text-base font-semibold text-ink">
                   {shelf.name}

@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import { importGoodreadsBatch, type ImportRowResult } from "@/actions/import";
 import { parseGoodreadsCsv, shelfLabel, type GoodreadsRow } from "@/lib/goodreads";
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 3;
+
+type Attempt = { row: GoodreadsRow; result: ImportRowResult };
 
 const OUTCOME_LABEL: Record<ImportRowResult["outcome"], string> = {
   importado: "importados",
   ja_existia: "já estavam na estante",
-  nao_encontrado: "não encontrados no Google Books",
   erro: "com erro",
 };
 
@@ -18,7 +19,8 @@ export function GoodreadsImport() {
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [parseError, setParseError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [results, setResults] = useState<ImportRowResult[]>([]);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [total, setTotal] = useState(0);
   const [done, setDone] = useState(false);
 
   const customShelves = useMemo(() => {
@@ -33,7 +35,7 @@ export function GoodreadsImport() {
 
   async function onFile(file: File | undefined) {
     setRows(null);
-    setResults([]);
+    setAttempts([]);
     setDone(false);
     setProgress(null);
     setParseError(null);
@@ -53,38 +55,54 @@ export function GoodreadsImport() {
     });
   }
 
-  async function startImport() {
-    if (!rows) return;
-    const prepared = rows.map((row) => ({
+  function withSelectedShelves(list: GoodreadsRow[]) {
+    return list.map((row) => ({
       ...row,
       customShelves: row.customShelves.filter((s) => !excluded.has(s)),
     }));
-    setResults([]);
+  }
+
+  async function run(list: GoodreadsRow[], previous: Attempt[]) {
+    const prepared = withSelectedShelves(list);
+    setAttempts(previous);
+    setTotal(prepared.length);
     setDone(false);
     setProgress(0);
 
     for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
       const batch = prepared.slice(i, i + BATCH_SIZE);
+      let batchResults: ImportRowResult[];
       try {
-        const batchResults = await importGoodreadsBatch(batch);
-        setResults((prev) => [...prev, ...batchResults]);
+        batchResults = await importGoodreadsBatch(batch);
       } catch (err) {
         const detail = err instanceof Error ? err.message : "Falha na requisição";
-        setResults((prev) => [
-          ...prev,
-          ...batch.map((r) => ({ title: r.title, outcome: "erro" as const, detail })),
-        ]);
+        batchResults = batch.map((r) => ({ title: r.title, outcome: "erro" as const, detail }));
       }
+      setAttempts((prev) => [...prev, ...batch.map((row, j) => ({ row, result: batchResults[j] }))]);
       setProgress(Math.min(i + BATCH_SIZE, prepared.length));
     }
     setDone(true);
   }
 
-  const counts = results.reduce<Record<string, number>>((acc, r) => {
+  const startImport = () => rows && run(rows, []);
+
+  const isProblem = (a: Attempt) =>
+    a.result.outcome === "erro";
+
+  const retryProblems = () =>
+    run(
+      attempts.filter(isProblem).map((a) => a.row),
+      attempts.filter((a) => !isProblem(a)),
+    );
+
+  const counts = attempts.reduce<Record<string, number>>((acc, { result: r }) => {
     acc[r.outcome] = (acc[r.outcome] ?? 0) + 1;
     return acc;
   }, {});
-  const problems = results.filter((r) => r.outcome === "nao_encontrado" || r.outcome === "erro");
+  const imported = attempts.filter((a) => a.result.outcome === "importado");
+  const viaOpenLibrary = imported.filter((a) => a.result.source === "openlibrary").length;
+  const manual = imported.filter((a) => a.result.source === "manual").length;
+  const problems = attempts.filter(isProblem).map((a) => a.result);
 
   return (
     <div className="space-y-6">
@@ -143,11 +161,11 @@ export function GoodreadsImport() {
           <div className="h-2 overflow-hidden rounded-full bg-dust-line">
             <div
               className="h-full rounded-full bg-cover transition-[width]"
-              style={{ width: `${(progress / rows.length) * 100}%` }}
+              style={{ width: `${(progress / Math.max(total, 1)) * 100}%` }}
             />
           </div>
           <p className="text-sm text-ink-soft">
-            {progress} de {rows.length}
+            {progress} de {total}
           </p>
         </div>
       )}
@@ -160,13 +178,34 @@ export function GoodreadsImport() {
               .map((key) => (
                 <li key={key}>
                   {counts[key]} {OUTCOME_LABEL[key]}
+                  {key === "importado" && (viaOpenLibrary > 0 || manual > 0) && (
+                    <span className="text-ink-soft">
+                      {" "}
+                      ({[
+                        viaOpenLibrary > 0 && `${viaOpenLibrary} pela Open Library`,
+                        manual > 0 && `${manual} cadastrados com os dados do CSV`,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                      )
+                    </span>
+                  )}
                 </li>
               ))}
           </ul>
           {problems.length > 0 && (
+            <button
+              type="button"
+              onClick={retryProblems}
+              className="rounded-lg border border-dust-line px-3 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink-soft hover:text-ink"
+            >
+              Tentar de novo os {problems.length} com erro
+            </button>
+          )}
+          {problems.length > 0 && (
             <details className="text-sm text-ink-soft">
               <summary className="cursor-pointer font-medium text-ink">
-                Ver livros que não entraram
+                Ver livros com erro
               </summary>
               <ul className="mt-2 space-y-1">
                 {problems.map((r, i) => (

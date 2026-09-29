@@ -4,36 +4,89 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { searchVolumes, type NormalizedVolume } from "@/lib/google-books";
+import { findOpenLibraryVolume } from "@/lib/open-library";
+import { upsertBook } from "@/lib/books-cache";
+import { slugify } from "@/lib/slug";
 import { formatFromBinding, isAbandonedShelf, shelfLabel } from "@/lib/goodreads";
 import { importBatchSchema } from "@/lib/validation";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-export type ImportOutcome = "importado" | "ja_existia" | "nao_encontrado" | "erro";
+export type ImportOutcome = "importado" | "ja_existia" | "erro";
+
+export type ImportSource = "google" | "openlibrary" | "manual";
 
 export interface ImportRowResult {
   title: string;
   outcome: ImportOutcome;
+  source?: ImportSource;
   detail?: string;
 }
 
-async function findVolume(row: {
-  title: string;
-  author: string;
-  isbn10: string | null;
-  isbn13: string | null;
-}): Promise<NormalizedVolume | null> {
+type ImportRow = ReturnType<typeof importBatchSchema.parse>["rows"][number];
+
+async function findInGoogle(row: ImportRow): Promise<NormalizedVolume | null> {
   for (const isbn of [row.isbn13, row.isbn10]) {
     if (!isbn) continue;
     const { items } = await searchVolumes(isbn, 0, 1);
     if (items[0]) return items[0];
   }
-  // Goodreads acrescenta a série ao título: "Dom Casmurro (Coleção, #1)"
-  const title = row.title.replace(/\s*\([^)]*\)\s*$/, "");
+  // Goodreads acrescenta série/edição ao título: "Dom Casmurro (Col, #1)", "X (Portuguese Edition)"
+  const title = row.title.replace(/\s*\([^)]*\)\s*$/, "").trim();
   const author = row.author.split(",")[0]?.trim();
-  const query = `intitle:${JSON.stringify(title)}${author ? ` inauthor:${JSON.stringify(author)}` : ""}`;
-  const { items } = await searchVolumes(query, 0, 1);
-  return items[0] ?? null;
+  const queries = [
+    author ? `intitle:${JSON.stringify(title)} inauthor:${JSON.stringify(author)}` : null,
+    author ? `${title} ${author}` : null,
+    `intitle:${JSON.stringify(title)}`,
+  ];
+  for (const query of queries) {
+    if (!query) continue;
+    const { items } = await searchVolumes(query, 0, 1);
+    if (items[0]) return items[0];
+  }
+  return null;
+}
+
+// Sem catálogo que reconheça o livro, cria a partir dos dados do próprio CSV.
+// O id vem do Book Id do Goodreads, então importar de novo não duplica.
+function volumeFromRow(row: ImportRow): NormalizedVolume {
+  const id = row.goodreadsId || slugify(`${row.title} ${row.author}`);
+  return {
+    googleVolumeId: `manual:gr:${id}`,
+    isbn10: row.isbn10,
+    isbn13: row.isbn13,
+    title: row.title,
+    subtitle: null,
+    authors: row.author ? [row.author] : [],
+    publisher: row.publisher,
+    publishedDate: row.year ? String(row.year) : null,
+    publishedYear: row.year,
+    description: null,
+    pageCount: row.pageCount,
+    language: null,
+    thumbnailUrl: null,
+    categories: [],
+    averageRating: null,
+    ratingsCount: null,
+  };
+}
+
+async function resolveVolume(
+  row: ImportRow,
+): Promise<{ volume: NormalizedVolume; source: ImportSource }> {
+  const google = await findInGoogle(row);
+  if (google) return { volume: google, source: "google" };
+
+  const cleanTitle = row.title.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const openLibrary = await findOpenLibraryVolume({
+    title: cleanTitle,
+    author: row.author,
+    isbn10: row.isbn10,
+    isbn13: row.isbn13,
+  });
+  if (openLibrary) return { volume: openLibrary, source: "openlibrary" };
+
+  return { volume: volumeFromRow(row), source: "manual" };
 }
 
 async function ensureShelf(
@@ -87,36 +140,12 @@ export async function importGoodreadsBatch(rows: unknown): Promise<ImportRowResu
   const results: ImportRowResult[] = [];
 
   for (const row of parsed.data.rows) {
+    // respiro entre livros para não estourar o limite do Google Books
+    if (results.length > 0) await new Promise((resolve) => setTimeout(resolve, 300));
     try {
-      const volume = await findVolume(row);
-      if (!volume) {
-        results.push({ title: row.title, outcome: "nao_encontrado" });
-        continue;
-      }
-
-      const { data: book, error: bookError } = await supabase
-        .from("books")
-        .upsert(
-          {
-            google_volume_id: volume.googleVolumeId,
-            isbn_10: volume.isbn10,
-            isbn_13: volume.isbn13,
-            title: volume.title,
-            subtitle: volume.subtitle,
-            authors: volume.authors,
-            publisher: volume.publisher,
-            published_date: volume.publishedDate,
-            published_year: volume.publishedYear,
-            description: volume.description,
-            page_count: volume.pageCount,
-            language: volume.language,
-            thumbnail_url: volume.thumbnailUrl,
-          },
-          { onConflict: "google_volume_id" },
-        )
-        .select("id")
-        .single();
-      if (bookError || !book) throw new Error(bookError?.message ?? "Falha ao salvar o livro");
+      const { volume, source } = await resolveVolume(row);
+      const { id: bookId, error: bookError } = await upsertBook(supabase, volume);
+      if (bookError || !bookId) throw new Error(bookError ?? "Falha ao salvar o livro");
 
       const abandoned = row.customShelves.some(isAbandonedShelf);
       const shelfNames = row.customShelves.filter((s) => !isAbandonedShelf(s));
@@ -143,7 +172,7 @@ export async function importGoodreadsBatch(rows: unknown): Promise<ImportRowResu
       const { data: entry, error: entryError } = await supabase
         .from("library_entries")
         .upsert(
-          { user_id: user.id, book_id: book.id, status_id: statusId },
+          { user_id: user.id, book_id: bookId, status_id: statusId },
           { onConflict: "user_id,book_id", ignoreDuplicates: true },
         )
         .select("id")
@@ -180,7 +209,7 @@ export async function importGoodreadsBatch(rows: unknown): Promise<ImportRowResu
         if (sessionError) throw new Error(sessionError.message);
       }
 
-      results.push({ title: row.title, outcome: "importado" });
+      results.push({ title: row.title, outcome: "importado", source });
     } catch (err) {
       results.push({
         title: row.title,
