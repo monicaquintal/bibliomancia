@@ -27,6 +27,18 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // Se o Supabase cair no Site URL (redirectTo fora da lista de Redirect URLs),
+  // o code chega em "/" — encaminha para o callback para não perder o reset.
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.search = "";
+    url.searchParams.set("code", code);
+    url.searchParams.set("next", "/redefinir-senha");
+    return NextResponse.redirect(url);
+  }
+
   const { data } = await supabase.auth.getClaims();
   const isAuthenticated = Boolean(data?.claims);
   const pathname = request.nextUrl.pathname;
