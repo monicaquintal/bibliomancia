@@ -26,7 +26,7 @@ export default async function SearchPage() {
         </p>
       </div>
       <SearchClient existingVolumeIds={existingVolumeIds} />
-      <ManualBookForm />
+      <ManualBookForm collapsible />
     </div>
   );
 }

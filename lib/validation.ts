@@ -120,8 +120,29 @@ export const toggleShelfEntrySchema = z.object({
 
 export const manualBookSchema = z.object({
   title: z.string().trim().min(1, "Informe o título").max(500),
+  subtitle: z.string().trim().max(500).optional(),
   authors: z.string().trim().max(500).optional(),
   publisher: z.string().trim().max(300).optional(),
+  description: z.string().trim().max(5000).optional(),
+  isbn: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/[-\s]/g, ""))
+    .refine((v) => /^(\d{9}[\dXx]|\d{13})$/.test(v), "ISBN inválido (10 ou 13 dígitos)")
+    .optional(),
+  // a URL vai parar em CSS (background-image), então nada de aspas ou parênteses
+  thumbnailUrl: z
+    .string()
+    .trim()
+    .max(2000)
+    .regex(/^https?:\/\/[^\s"'()<>]+$/, "Link da capa inválido")
+    .optional(),
   pageCount: z.coerce.number().int().positive().max(100000).optional(),
   year: z.coerce.number().int().min(0).max(3000).optional(),
+  status: z.enum(["quero", "lendo", "lido"]).default("quero"),
+  format: z.enum(["livro", "ebook", "audiobook"]).default("livro"),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
+    .optional(),
 });
