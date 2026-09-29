@@ -45,6 +45,9 @@ One concrete consequence of the breaking changes noted in `@AGENTS.md`: the sess
 - `library_entries` — one row per (user, book); `status_id` is the book's current shelf status.
 - `reading_sessions` — one row per reading cycle of a `library_entries` row (rereads = additional rows with increasing `sequence_number`). Holds `status` (em_andamento/concluida/abandonada), `format` (livro/ebook/audiobook), dates, and — only once concluded — `rating_half` (1–5 stars in 0.5 steps, stored as integers 2–10) and `review`; a DB CHECK enforces that rating/review can only be non-null when the session is concluded.
 - `reading_comments` — dated progress notes tied to one `reading_session`.
+- `shelves` / `shelf_entries` — user-defined shelves (many-to-many with `library_entries`, unlike the single `status_id`). Shelves named as a 4-digit year are merged into that year's block in the vitrine.
+- `marathons` / `marathon_entries` — personal reading challenges. With a book list, progress = listed books with a concluded session (finished inside the period, if one is set); with no list, progress = concluded sessions finished inside the period vs `target_books` (`lib/marathons.ts`).
+- `books.google_volume_id` is a generic external id: plain Google volume ids, `ol:<work>` for Open Library, `manual:<id>` for hand-entered books.
 - Status transitions are cross-cutting and all live in `actions/reading.ts`: starting a session sets the entry to "lendo", finishing sets it to "lido", abandoning sets it to "abandonado". They look up the system status id by key via `getSystemStatusId()` rather than hardcoding UUIDs — do the same for any new status-changing action.
 
 ### Design system (`app/globals.css`)

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { statusTone } from "@/lib/status-colors";
 import { ReadingGoalCard } from "@/components/ReadingGoalCard";
+import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { loadReadingCalendar } from "@/lib/reading-calendar";
 
 const FORMAT_LABEL: Record<string, string> = {
   livro: "Livro físico",
@@ -62,7 +64,12 @@ function Bar({
   );
 }
 
-export default async function StatsPage() {
+export default async function StatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ano?: string }>;
+}) {
+  const { ano } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -70,7 +77,7 @@ export default async function StatsPage() {
 
   const currentYear = new Date().getFullYear();
 
-  const [{ data: sessions }, { data: goal }] = await Promise.all([
+  const [{ data: sessions }, { data: goal }, calendar] = await Promise.all([
     supabase
       .from("reading_sessions")
       .select(
@@ -83,6 +90,7 @@ export default async function StatsPage() {
       .eq("user_id", user!.id)
       .eq("year", currentYear)
       .maybeSingle(),
+    loadReadingCalendar(supabase, user!.id),
   ]);
 
   const rows = sessions ?? [];
@@ -160,6 +168,9 @@ export default async function StatsPage() {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 5);
   const maxAuthorCount = Math.max(0, ...topAuthors.map(([, n]) => n));
+
+  const requestedYear = Number(ano);
+  const calendarYear = calendar.years.includes(requestedYear) ? requestedYear : null;
 
   const hasAnyData = concluded.length > 0 || reading > 0 || abandoned > 0;
 
@@ -274,6 +285,13 @@ export default async function StatsPage() {
           </section>
         )}
       </div>
+
+      <ReadingCalendar
+        days={calendar.days}
+        today={calendar.today}
+        year={calendarYear}
+        years={calendar.years}
+      />
 
       {abandoned > 0 && (
         <p className="text-sm text-ink-soft">

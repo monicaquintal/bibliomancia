@@ -239,6 +239,61 @@ export interface Database {
           },
         ];
       };
+      marathons: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          starts_on: string | null;
+          ends_on: string | null;
+          target_books: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          target_books?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["marathons"]["Insert"]>;
+        Relationships: [];
+      };
+      marathon_entries: {
+        Row: {
+          marathon_id: string;
+          library_entry_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          marathon_id: string;
+          library_entry_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["marathon_entries"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "marathon_entries_marathon_id_fkey";
+            columns: ["marathon_id"];
+            isOneToOne: false;
+            referencedRelation: "marathons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marathon_entries_library_entry_id_fkey";
+            columns: ["library_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "library_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

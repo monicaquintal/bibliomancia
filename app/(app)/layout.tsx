@@ -38,6 +38,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link href="/vitrine" className="transition-colors hover:text-ink">
                 Vitrine
               </Link>
+              <Link href="/maratonas" className="transition-colors hover:text-ink">
+                Maratonas
+              </Link>
               <Link href="/estatisticas" className="transition-colors hover:text-ink">
                 Estatísticas
               </Link>
@@ -67,6 +70,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <Link href="/vitrine" className="hover:text-ink">
             Vitrine
+          </Link>
+          <Link href="/maratonas" className="hover:text-ink">
+            Maratonas
           </Link>
           <Link href="/estatisticas" className="hover:text-ink">
             Estatísticas

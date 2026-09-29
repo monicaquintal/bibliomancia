@@ -7,6 +7,8 @@ import { deleteShelf } from "@/actions/shelves";
 import { StatusGlyph } from "@/components/StatusGlyph";
 import { LibrarySearch, type LibraryEntryView } from "@/components/LibrarySearch";
 import { statusTone } from "@/lib/status-colors";
+import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { loadReadingCalendar } from "@/lib/reading-calendar";
 
 export default async function LibraryPage({
   searchParams,
@@ -19,7 +21,7 @@ export default async function LibraryPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: statuses }, { data: allEntries }, { data: shelves }] = await Promise.all([
+  const [{ data: statuses }, { data: allEntries }, { data: shelves }, calendar] = await Promise.all([
     supabase
       .from("reading_statuses")
       .select("id, key, label, is_system, sort_order")
@@ -37,6 +39,7 @@ export default async function LibraryPage({
       .select("id, name")
       .eq("user_id", user!.id)
       .order("name", { ascending: true }),
+    loadReadingCalendar(supabase, user!.id),
   ]);
 
   const activeShelf = shelves?.find((s) => s.id === shelfFilter);
@@ -77,6 +80,16 @@ export default async function LibraryPage({
           Os livros que você quer ler, está lendo, já leu — ou deixou de lado.
         </p>
       </div>
+
+      {allEntries && allEntries.length > 0 && (
+        <ReadingCalendar
+          compact
+          days={calendar.days}
+          today={calendar.today}
+          year={null}
+          years={calendar.years}
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-dust-line pb-3 text-sm">
         <Link

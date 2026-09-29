@@ -146,3 +146,25 @@ export const manualBookSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
     .optional(),
 });
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida");
+
+export const createMarathonSchema = z
+  .object({
+    name: z.string().trim().min(1, "Dê um nome à maratona").max(80),
+    description: z.string().trim().max(1000).optional(),
+    startsOn: isoDate.optional(),
+    endsOn: isoDate.optional(),
+    targetBooks: z.coerce.number().int().positive().max(1000).optional(),
+  })
+  .refine((v) => !v.startsOn || !v.endsOn || v.endsOn >= v.startsOn, {
+    message: "O fim não pode ser antes do início",
+    path: ["endsOn"],
+  });
+
+export const marathonIdSchema = z.object({ marathonId: z.string().uuid() });
+
+export const marathonBookSchema = z.object({
+  marathonId: z.string().uuid(),
+  entryId: z.string().uuid(),
+});
