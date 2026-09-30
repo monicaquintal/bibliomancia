@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Karla } from "next/font/google";
+import { Caveat, Fraunces, Karla } from "next/font/google";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -10,6 +10,11 @@ const fraunces = Fraunces({
 
 const karla = Karla({
   variable: "--font-karla",
+  subsets: ["latin"],
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
   subsets: ["latin"],
 });
 
@@ -26,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${fraunces.variable} ${karla.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${karla.variable} ${caveat.variable} h-full antialiased`}
       style={{ colorScheme: "light dark" }}
       suppressHydrationWarning
     >

@@ -118,6 +118,13 @@ export const toggleShelfEntrySchema = z.object({
   member: z.enum(["0", "1"]),
 });
 
+// a URL pode parar em CSS (background-image), então nada de aspas ou parênteses
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .max(2000)
+  .regex(/^https?:\/\/[^\s"'()<>]+$/, "Link da capa inválido");
+
 export const manualBookSchema = z.object({
   title: z.string().trim().min(1, "Informe o título").max(500),
   subtitle: z.string().trim().max(500).optional(),
@@ -130,13 +137,7 @@ export const manualBookSchema = z.object({
     .transform((v) => v.replace(/[-\s]/g, ""))
     .refine((v) => /^(\d{9}[\dXx]|\d{13})$/.test(v), "ISBN inválido (10 ou 13 dígitos)")
     .optional(),
-  // a URL vai parar em CSS (background-image), então nada de aspas ou parênteses
-  thumbnailUrl: z
-    .string()
-    .trim()
-    .max(2000)
-    .regex(/^https?:\/\/[^\s"'()<>]+$/, "Link da capa inválido")
-    .optional(),
+  thumbnailUrl: imageUrlSchema.optional(),
   pageCount: z.coerce.number().int().positive().max(100000).optional(),
   year: z.coerce.number().int().min(0).max(3000).optional(),
   status: z.enum(["quero", "lendo", "lido"]).default("quero"),
@@ -156,6 +157,7 @@ export const createMarathonSchema = z
     startsOn: isoDate.optional(),
     endsOn: isoDate.optional(),
     targetBooks: z.coerce.number().int().positive().max(1000).optional(),
+    coverUrl: imageUrlSchema.optional(),
   })
   .refine((v) => !v.startsOn || !v.endsOn || v.endsOn >= v.startsOn, {
     message: "O fim não pode ser antes do início",
@@ -167,4 +169,34 @@ export const marathonIdSchema = z.object({ marathonId: z.string().uuid() });
 export const marathonBookSchema = z.object({
   marathonId: z.string().uuid(),
   entryId: z.string().uuid(),
+});
+
+export const addChallengeSchema = z.object({
+  marathonId: z.string().uuid(),
+  title: z.string().trim().min(1, "Escreva o desafio").max(120),
+});
+
+export const challengeTitleSchema = z.object({
+  title: z.string().trim().min(1, "Escreva o desafio").max(120),
+});
+
+export const libraryChallengeSchema = z.object({
+  marathonId: z.string().uuid(),
+  challengeId: z.string().uuid(),
+});
+
+export const deleteChallengeSchema = z.object({ challengeId: z.string().uuid() });
+
+export const joinCatalogSchema = z.object({ key: z.string().min(1).max(40) });
+
+export const challengeIdSchema = z.object({
+  marathonId: z.string().uuid(),
+  challengeId: z.string().uuid(),
+});
+
+export const assignChallengeSchema = z.object({
+  marathonId: z.string().uuid(),
+  challengeId: z.string().uuid(),
+  // vazio = tirar o livro do desafio
+  entryId: z.string().uuid().nullable(),
 });

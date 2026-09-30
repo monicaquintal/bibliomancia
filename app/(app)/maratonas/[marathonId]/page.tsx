@@ -5,7 +5,14 @@ import { toLocalDay } from "@/components/ReadingCalendar";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { MarathonForm } from "@/components/MarathonForm";
 import { MarathonProgressBar } from "@/components/MarathonProgressBar";
-import { addMarathonBook, deleteMarathon, removeMarathonBook } from "@/actions/marathons";
+import {
+  addChallenge,
+  addLibraryChallenge,
+  addMarathonBook,
+  deleteMarathon,
+  removeMarathonBook,
+} from "@/actions/marathons";
+import { ChallengeList, type ChallengeView } from "@/components/ChallengeList";
 import { bookNote, formatPeriod, marathonProgress } from "@/lib/marathons";
 
 export default async function MarathonPage({
@@ -19,11 +26,11 @@ export default async function MarathonPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: marathon }, { data: links }, { data: entries }, { data: sessions }] =
+  const [{ data: marathon }, { data: links }, { data: entries }, { data: sessions }, { data: challengeRows }, { data: library }] =
     await Promise.all([
       supabase
         .from("marathons")
-        .select("id, name, description, starts_on, ends_on, target_books")
+        .select("id, name, description, starts_on, ends_on, target_books, cover_url")
         .eq("id", marathonId)
         .eq("user_id", user!.id)
         .maybeSingle(),
@@ -44,6 +51,15 @@ export default async function MarathonPage({
         .eq("user_id", user!.id)
         .eq("status", "concluida")
         .not("finished_at", "is", null),
+      supabase
+        .from("marathon_challenges")
+        .select(
+          "id, title, position, library_entry_id, challenge_id, library_entries(id, books(title, authors, thumbnail_url), reading_statuses(key), reading_sessions(status, finished_at))",
+        )
+        .eq("marathon_id", marathonId)
+        .order("position", { ascending: true }),
+      // biblioteca de desafios: os do catálogo e os seus (a RLS filtra)
+      supabase.from("challenges").select("id, title, user_id").order("title", { ascending: true }),
     ]);
 
   if (!marathon) notFound();
@@ -54,12 +70,46 @@ export default async function MarathonPage({
     reading_statuses: { key: string } | null;
   }) => ({ sessions: b.reading_sessions ?? [], statusKey: b.reading_statuses?.key ?? null });
   const books = (links ?? []).flatMap((l) => (l.library_entries ? [l.library_entries] : []));
+  const challenges = challengeRows ?? [];
+  const emptyInput = { sessions: [], statusKey: null };
+  // com desafios, cada desafio conta como um "livro"; sem livro atribuído, ainda não lido
   const progress = marathonProgress(
     marathon,
-    books.map(toProgressInput),
+    challenges.length > 0
+      ? challenges.map((c) => (c.library_entries ? toProgressInput(c.library_entries) : emptyInput))
+      : books.map(toProgressInput),
     (sessions ?? []).map((s) => s.finished_at as string),
     today,
   );
+
+  const challengeViews: ChallengeView[] = challenges.map((c) => {
+    const e = c.library_entries;
+    return {
+      id: c.id,
+      title: c.title,
+      book:
+        e && e.books
+          ? {
+              entryId: e.id,
+              title: e.books.title,
+              authors: e.books.authors ?? [],
+              thumbnailUrl: e.books.thumbnail_url,
+              done: marathonProgress(marathon, [toProgressInput(e)], [], today).done === 1,
+              note: bookNote(marathon, toProgressInput(e)),
+            }
+          : null,
+    };
+  });
+  const linkedChallengeIds = new Set(challenges.map((c) => c.challenge_id).filter(Boolean));
+  const libraryOptions = (library ?? []).filter((c) => !linkedChallengeIds.has(c.id));
+  const usedInChallenges = new Set(challenges.map((c) => c.library_entry_id).filter(Boolean));
+  const challengeOptions = (entries ?? [])
+    .filter((e) => e.books && !usedInChallenges.has(e.id))
+    .sort((a, b) => a.books!.title.localeCompare(b.books!.title, "pt-BR"))
+    .map((e) => ({
+      id: e.id,
+      label: `${e.books!.title}${e.books!.authors?.length ? ` — ${e.books!.authors.join(", ")}` : ""}`,
+    }));
 
   const inMarathon = new Set(books.map((b) => b.id));
   const candidates = (entries ?? [])
@@ -75,6 +125,14 @@ export default async function MarathonPage({
         <Link href="/maratonas" className="text-sm text-ink-soft hover:text-ink">
           ← Maratonas
         </Link>
+        {marathon.cover_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={marathon.cover_url}
+            alt=""
+            className="mt-3 h-40 w-full max-w-md rounded-lg object-cover"
+          />
+        )}
         <h1 className="mt-2 font-serif text-3xl font-semibold text-ink">{marathon.name}</h1>
         {formatPeriod(marathon) && (
           <p className="mt-1 text-sm text-ink-soft">{formatPeriod(marathon)}</p>
@@ -90,7 +148,7 @@ export default async function MarathonPage({
 
       <div className="rounded-lg border border-dust-line bg-paper-raised p-4">
         <MarathonProgressBar progress={progress} />
-        {books.length === 0 && (
+        {books.length === 0 && challenges.length === 0 && (
           <p className="mt-3 text-xs text-ink-soft">
             {marathon.starts_on || marathon.ends_on
               ? "Sem lista de livros: contamos os livros que você terminar dentro do período."
@@ -99,6 +157,78 @@ export default async function MarathonPage({
         )}
       </div>
 
+      <section className="space-y-3">
+        <h2 className="font-serif text-lg font-semibold text-ink">Desafios</h2>
+        {challenges.length === 0 && (
+          <p className="text-sm text-ink-soft">
+            Adicione desafios da biblioteca, como “livro com a letra A” ou “capa azul”, e preencha
+            cada um com um livro seu. Se preferir, use só a lista de livros mais abaixo.
+          </p>
+        )}
+
+        <ChallengeList marathonId={marathon.id} challenges={challengeViews} options={challengeOptions} />
+
+        <form action={addLibraryChallenge} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="marathonId" value={marathon.id} />
+          <select
+            name="challengeId"
+            required
+            defaultValue=""
+            aria-label="Desafio da biblioteca"
+            className="max-w-full rounded-lg border border-dust-line bg-paper px-2.5 py-1.5 text-sm focus:border-cover focus:outline-none"
+          >
+            <option value="" disabled>
+              Adicionar desafio da biblioteca…
+            </option>
+            {(["mine", "catalog"] as const).map((group) => {
+              const items = libraryOptions.filter((c) => (group === "mine") === (c.user_id !== null));
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={group} label={group === "mine" ? "Meus desafios" : "Do catálogo"}>
+                  {items.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+          <button
+            type="submit"
+            className="rounded-lg border border-dust-line px-2.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink-soft hover:text-ink"
+          >
+            Adicionar
+          </button>
+        </form>
+
+        <form action={addChallenge} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="marathonId" value={marathon.id} />
+          <input
+            name="title"
+            required
+            maxLength={120}
+            aria-label="Criar desafio novo"
+            placeholder="Ou crie um desafio novo (ex: livro de um autor brasileiro)"
+            className="w-full max-w-sm rounded-lg border border-dust-line bg-paper px-2.5 py-1.5 text-sm focus:border-cover focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-lg border border-dust-line px-2.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-ink-soft hover:text-ink"
+          >
+            Criar e adicionar
+          </button>
+        </form>
+        <p className="text-xs text-ink-soft">
+          Os desafios ficam na sua{" "}
+          <Link href="/maratonas/desafios" className="underline hover:text-ink">
+            biblioteca de desafios
+          </Link>{" "}
+          e podem entrar em qualquer maratona.
+        </p>
+      </section>
+
+      {challenges.length === 0 && (
       <section className="space-y-3">
         <h2 className="font-serif text-lg font-semibold text-ink">Livros da maratona</h2>
 
@@ -184,6 +314,7 @@ export default async function MarathonPage({
           </p>
         )}
       </section>
+      )}
 
       <form action={deleteMarathon}>
         <input type="hidden" name="marathonId" value={marathon.id} />

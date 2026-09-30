@@ -8,6 +8,7 @@ import { StatusGlyph } from "@/components/StatusGlyph";
 import { LibrarySearch, type LibraryEntryView } from "@/components/LibrarySearch";
 import { statusTone } from "@/lib/status-colors";
 import { ReadingCalendar } from "@/components/ReadingCalendar";
+import { Onboarding } from "@/components/Onboarding";
 import { loadReadingCalendar } from "@/lib/reading-calendar";
 
 export default async function LibraryPage({
@@ -77,7 +78,8 @@ export default async function LibraryPage({
       <div>
         <h1 className="font-serif text-3xl font-semibold text-ink">Minha estante</h1>
         <p className="mt-1 text-sm text-ink-soft">
-          Os livros que você quer ler, está lendo, já leu — ou deixou de lado.
+          Os livros que você quer ler, está lendo, já leu — ou deixou de lado.{" "}
+          <span className="highlight">Ler por prazer, no seu ritmo.</span>
         </p>
       </div>
 
@@ -91,69 +93,100 @@ export default async function LibraryPage({
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-dust-line pb-3 text-sm">
-        <Link
-          href={filterHref(undefined, activeShelf?.id)}
-          className={`border-b-2 pb-1 font-medium transition-colors ${
-            !statusFilter
-              ? "border-ink text-ink"
-              : "border-transparent text-ink-soft hover:text-ink"
-          }`}
-        >
-          Todos
-        </Link>
-        {statuses?.map((status) => {
-          const tone = statusTone(status.key);
-          const active = statusFilter === status.key;
-          return (
-            <Link
-              key={status.id}
-              href={filterHref(status.key, activeShelf?.id)}
-              className={`flex items-center gap-1.5 border-b-2 pb-1 font-medium transition-colors ${
-                active ? "text-ink" : "text-ink-soft hover:text-ink"
-              }`}
-              style={{ borderBottomColor: active ? tone.dot : "transparent" }}
-            >
-              <StatusGlyph statusKey={status.key} maskColor="var(--paper)" className="h-3 w-3" />
-              {status.label}
-            </Link>
-          );
-        })}
-      </div>
-
-      {shelves && shelves.length > 0 && (
+      <section aria-label="Filtros" className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-ink-soft">Estantes:</span>
-          {shelves.map((shelf) => {
-            const active = activeShelf?.id === shelf.id;
+          <span className="text-xs font-medium uppercase tracking-wide text-ink-soft">
+            Filtros
+          </span>
+          {statuses?.map((status) => {
+            const tone = statusTone(status.key);
+            const active = statusFilter === status.key;
             return (
               <Link
-                key={shelf.id}
-                href={filterHref(statusFilter, active ? undefined : shelf.id)}
+                key={status.id}
+                href={filterHref(active ? undefined : status.key, activeShelf?.id)}
                 aria-current={active ? "true" : undefined}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                   active
-                    ? "border-cover bg-cover text-paper"
+                    ? "text-ink"
                     : "border-dust-line text-ink-soft hover:border-ink-soft hover:text-ink"
                 }`}
+                style={
+                  active
+                    ? { borderColor: tone.dot, background: `color-mix(in srgb, ${tone.dot} 18%, transparent)` }
+                    : undefined
+                }
               >
-                {shelf.name}
+                <StatusGlyph statusKey={status.key} maskColor="var(--paper)" className="h-3 w-3" />
+                {status.label}
               </Link>
             );
           })}
-          {activeShelf && (
-            <form action={deleteShelf}>
-              <input type="hidden" name="shelfId" value={activeShelf.id} />
-              <ConfirmButton
-                confirmMessage={`Excluir a estante "${activeShelf.name}"? Os livros continuam na sua biblioteca.`}
-                className="text-xs text-ink-soft underline hover:text-berry"
-              >
-                Excluir estante
-              </ConfirmButton>
-            </form>
-          )}
         </div>
-      )}
+
+        {shelves && shelves.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-xs font-medium uppercase tracking-wide text-ink-soft">
+              Estantes
+            </span>
+            {shelves.map((shelf) => {
+              const active = activeShelf?.id === shelf.id;
+              return (
+                <Link
+                  key={shelf.id}
+                  href={filterHref(statusFilter, active ? undefined : shelf.id)}
+                  aria-current={active ? "true" : undefined}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-cover bg-cover text-paper"
+                      : "border-dust-line text-ink-soft hover:border-ink-soft hover:text-ink"
+                  }`}
+                >
+                  {shelf.name}
+                </Link>
+              );
+            })}
+            {activeShelf && (
+              <form action={deleteShelf}>
+                <input type="hidden" name="shelfId" value={activeShelf.id} />
+                <ConfirmButton
+                  confirmMessage={`Excluir a estante "${activeShelf.name}"? Os livros continuam na sua biblioteca.`}
+                  className="text-xs text-ink-soft underline hover:text-berry"
+                >
+                  Excluir estante
+                </ConfirmButton>
+              </form>
+            )}
+          </div>
+        )}
+
+        {(statusFilter || activeShelf) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+            <span>Mostrando:</span>
+            {statusFilter && (
+              <Link
+                href={filterHref(undefined, activeShelf?.id)}
+                className="rounded-full bg-paper-raised px-2.5 py-1 font-medium text-ink ring-1 ring-dust-line hover:ring-berry"
+                aria-label="Remover filtro de status"
+              >
+                {statuses?.find((st) => st.key === statusFilter)?.label ?? statusFilter} ×
+              </Link>
+            )}
+            {activeShelf && (
+              <Link
+                href={filterHref(statusFilter, undefined)}
+                className="rounded-full bg-paper-raised px-2.5 py-1 font-medium text-ink ring-1 ring-dust-line hover:ring-berry"
+                aria-label="Remover filtro de estante"
+              >
+                {activeShelf.name} ×
+              </Link>
+            )}
+            <Link href="/library" className="underline hover:text-ink">
+              Limpar filtros
+            </Link>
+          </div>
+        )}
+      </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -168,14 +201,12 @@ export default async function LibraryPage({
         </Link>
       </div>
 
-      {(!entries || entries.length === 0) && (
-        <p className="text-sm text-ink-soft">
-          Sua estante está vazia.{" "}
-          <Link href="/search" className="font-medium text-cover underline">
-            Que tal procurar o primeiro livro?
-          </Link>
-        </p>
-      )}
+      {(!entries || entries.length === 0) &&
+        (allEntries && allEntries.length > 0 ? (
+          <p className="text-sm text-ink-soft">Nenhum livro com esses filtros.</p>
+        ) : (
+          <Onboarding />
+        ))}
 
       {entries && entries.length > 0 && <LibrarySearch entries={entryViews} />}
     </div>

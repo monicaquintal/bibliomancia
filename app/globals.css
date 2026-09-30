@@ -15,6 +15,8 @@
   --dust-line: #dbe2ec;
   --stardust: rgba(217, 164, 65, 0.4);
   --stardust-2: rgba(35, 44, 82, 0.16);
+  --note: #fdf1c7;
+  --note-ink: #6b4a10;
 }
 
 @theme inline {
@@ -30,6 +32,9 @@
   --color-night: var(--night);
   --color-dust: var(--dust);
   --color-dust-line: var(--dust-line);
+  --color-note: var(--note);
+  --color-note-ink: var(--note-ink);
+  --font-hand: var(--font-caveat);
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-karla);
 }
@@ -50,6 +55,8 @@
     --dust-line: #263049;
     --stardust: rgba(232, 192, 105, 0.6);
     --stardust-2: rgba(255, 255, 255, 0.4);
+    --note: #4a3a14;
+    --note-ink: #f3dca0;
   }
 }
 
@@ -68,6 +75,8 @@
   --dust-line: #263049;
   --stardust: rgba(232, 192, 105, 0.6);
   --stardust-2: rgba(255, 255, 255, 0.4);
+  --note: #4a3a14;
+  --note-ink: #f3dca0;
 }
 
 body {
@@ -119,4 +128,15 @@ textarea::placeholder {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Marca-texto: sublinhado grosso e translúcido, que acompanha quebras de linha */
+.highlight {
+  background-image: linear-gradient(
+    transparent 58%,
+    color-mix(in srgb, var(--marigold) 45%, transparent) 58%
+  );
+  padding: 0 0.15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }

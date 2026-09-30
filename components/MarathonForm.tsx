@@ -16,6 +16,7 @@ export type MarathonFormValues = {
   starts_on: string | null;
   ends_on: string | null;
   target_books: number | null;
+  cover_url: string | null;
 };
 
 // Sem `marathon`: cria uma nova. Com `marathon`: edita a existente.
@@ -50,6 +51,17 @@ export function MarathonForm({ marathon }: { marathon?: MarathonFormValues }) {
             rows={2}
             maxLength={1000}
             defaultValue={marathon?.description ?? ""}
+            className={inputClass}
+          />
+        </label>
+        <label className={`${labelClass} sm:col-span-2`}>
+          Capa (link de uma imagem, opcional)
+          <input
+            name="coverUrl"
+            type="url"
+            placeholder="https://…"
+            maxLength={2000}
+            defaultValue={marathon?.cover_url ?? ""}
             className={inputClass}
           />
         </label>

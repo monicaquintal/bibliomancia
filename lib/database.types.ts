@@ -248,6 +248,8 @@ export interface Database {
           starts_on: string | null;
           ends_on: string | null;
           target_books: number | null;
+          catalog_key: string | null;
+          cover_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -258,6 +260,8 @@ export interface Database {
           starts_on?: string | null;
           ends_on?: string | null;
           target_books?: number | null;
+          catalog_key?: string | null;
+          cover_url?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["marathons"]["Insert"]>;
@@ -290,6 +294,108 @@ export interface Database {
             columns: ["library_entry_id"];
             isOneToOne: false;
             referencedRelation: "library_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      marathon_challenges: {
+        Row: {
+          id: string;
+          marathon_id: string;
+          user_id: string;
+          title: string;
+          position: number;
+          library_entry_id: string | null;
+          challenge_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          marathon_id: string;
+          user_id: string;
+          title: string;
+          position?: number;
+          library_entry_id?: string | null;
+          challenge_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["marathon_challenges"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "marathon_challenges_marathon_id_fkey";
+            columns: ["marathon_id"];
+            isOneToOne: false;
+            referencedRelation: "marathons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "marathon_challenges_library_entry_id_fkey";
+            columns: ["library_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "library_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      challenges: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          title: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          title: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["challenges"]["Insert"]>;
+        Relationships: [];
+      };
+      catalog_marathons: {
+        Row: {
+          id: string;
+          key: string;
+          name: string;
+          description: string | null;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          name: string;
+          description?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["catalog_marathons"]["Insert"]>;
+        Relationships: [];
+      };
+      catalog_marathon_challenges: {
+        Row: {
+          catalog_marathon_id: string;
+          challenge_id: string;
+          position: number;
+        };
+        Insert: {
+          catalog_marathon_id: string;
+          challenge_id: string;
+          position: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["catalog_marathon_challenges"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "catalog_marathon_challenges_catalog_marathon_id_fkey";
+            columns: ["catalog_marathon_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_marathons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "catalog_marathon_challenges_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: false;
+            referencedRelation: "challenges";
             referencedColumns: ["id"];
           },
         ];

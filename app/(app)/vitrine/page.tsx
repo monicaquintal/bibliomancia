@@ -38,10 +38,22 @@ type ShelfBook = {
   finishedAt: string | null;
 };
 
+const SPINE_MIN_W = 16;
+const SPINE_MAX_W = 40;
+const SPINE_MIN_H = 148;
+
+// A espessura acompanha o número de páginas (~10 páginas por pixel, de 16 a 40 px) e
+// livros mais grossos ficam um pouco mais altos. Todos apoiam na tábua (items-end),
+// então a altura da fileira continua sendo SPINE_H.
+function spineSize(pageCount: number | null) {
+  if (!pageCount) return { width: 30, height: SPINE_H - 14 };
+  const width = Math.max(SPINE_MIN_W, Math.min(SPINE_MAX_W, Math.round(pageCount / 10)));
+  const t = (width - SPINE_MIN_W) / (SPINE_MAX_W - SPINE_MIN_W);
+  return { width, height: Math.round(SPINE_MIN_H + (SPINE_H - SPINE_MIN_H) * t) };
+}
+
 function Spine({ book }: { book: ShelfBook }) {
-  const width = book.pageCount
-    ? Math.max(24, Math.min(44, Math.round(book.pageCount / 14)))
-    : 30;
+  const { width, height } = spineSize(book.pageCount);
   const fallbackHue = hashHue(book.bookId);
 
   return (
@@ -52,7 +64,7 @@ function Spine({ book }: { book: ShelfBook }) {
         className="block shrink-0 rounded-[2px] shadow-[1px_0_0_rgba(0,0,0,0.15)_inset,-1px_0_0_rgba(255,255,255,0.12)_inset] outline-offset-2"
         style={{
           width,
-          height: SPINE_H,
+          height,
           backgroundImage: book.thumbnailUrl ? `url(${book.thumbnailUrl})` : undefined,
           backgroundColor: book.thumbnailUrl
             ? undefined
@@ -115,9 +127,10 @@ function FaceOutCover({ book, index }: { book: ShelfBook; index: number }) {
 }
 
 const BOOKS_PER_SHELF = 12;
-// Largura reservada por livro; cada estante tem sempre o tamanho de 12 lombadas,
-// então uma prateleira incompleta continua parecendo uma prateleira.
-const SPINE_SLOT = 38;
+// Toda estante tem o mesmo tamanho: cabem 12 lombadas, mesmo as mais grossas (+1px de vão).
+// 12 × 41 = 492px de tábua + 40px de respiro + 2px de borda = 534px por estante, então duas
+// lado a lado (com gap de 16px) cabem nos 1104px úteis do layout (max-w-6xl menos o padding).
+const SPINE_SLOT = SPINE_MAX_W + 1;
 
 // Cada estante comporta 12 lombadas; passou disso, abre outra. Em telas largas
 // as estantes ficam lado a lado, e quebram para a linha de baixo quando faltar espaço.
@@ -131,11 +144,7 @@ function SpineShelf({ books }: { books: ShelfBook[] }) {
       {shelves.map((shelf, i) => (
         <div
           key={i}
-          className="max-w-full rounded-lg border border-dust-line bg-paper-raised p-6"
-          style={{
-            contentVisibility: "auto",
-            containIntrinsicSize: `auto ${SPINE_H + SPINE_GAP + 48}px`,
-          }}
+          className="max-w-full rounded-lg border border-dust-line bg-paper-raised p-5"
         >
           <ul
             className="flex items-end gap-x-px"
@@ -257,7 +266,7 @@ export default async function VitrinePage() {
         <p className="mt-1 text-sm text-ink-soft">
           Um retrato da sua estante: o que você está lendo agora, de capa pra fora, e
           tudo que você já leu, lombada a lombada, organizado por ano. Passe o mouse
-          sobre uma lombada para ver o título.
+          sobre uma lombada para <span className="highlight">ver o título</span>.
         </p>
         <div className="mt-4">
           <NewShelfForm />
